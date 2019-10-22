@@ -2,11 +2,12 @@ var express = require('express');
 var app = express();
 var bodyParser = require('body-parser');
 var usuario = [{
+    id: 12992348,
     cod_trab: 1,
-    nom_trab: "alicia",
+    nom_trab: "Garcia Garcia, Adriel",
     ape_trab: "grimaldina",
-    cargo: "practicante",
-    nom_area: "uti",
+    cargo: "Practicante",
+    nom_area: "Sistemas",
     dni_trab: "71268147",
     usr_trab: "",
     psw_trab: "",
@@ -16,8 +17,8 @@ var usuario = [{
     jefe_trab: "",
     tije_trab: "",
     acc_sir: "",
-    tipo_usuario: "practicante",
-    tipo_solicitud: "creacion de usuario",
+    tipo_usuario: "Practicante",
+    tipo_solicitud: "Creacion de usuario",
     motivo_solicitud: "personal nuevo",
     servicios_red: " ",
     acceso_red: [" ", " ", " "],
@@ -27,7 +28,8 @@ var usuario = [{
     jefe: ["diego alquizar", "69", "jefe"],
     sustento: " ",
     observaciones: " ",
-    estado: "Creado"
+    estado: "Generado",
+    tipo_form: "ALTAS"
 }];
 
 app.use(bodyParser.json());
