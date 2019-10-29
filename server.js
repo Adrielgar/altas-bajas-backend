@@ -31,7 +31,8 @@ var usuario = [{
     sustento: " ",
     observaciones: " ",
     estado: "Generado",
-    tipo_form: "ALTAS"
+    tipo_form: "ALTAS",
+    pasw: '1234'
 }];
 
 var usuarioLogin = [];
@@ -63,6 +64,24 @@ auth.post('/register', function (req, res) {
     // var token = jwt.sign(user.id, 123); // normalmente el id se obtiene de la base de datos
 
 });
+
+auth.post('/login', function (req, res) {
+    var found = usuario.find(u => u.dni_trab === req.body.dni);
+    if (found) {
+        var index = usuario.findIndex(u => u.dni_trab === req.body.dni);
+        if (usuario[index].pasw === req.body.pasw)
+            sendToken(req.body.dni, res);
+        else
+            res.json({ succes: false, dni: null, token: null });
+    }
+    else
+        res.json({ succes: false, dni: null, token: null });
+});
+
+function sendToken(dni, res) {
+    var token = jwt.sign(dni, '1234');
+    res.json({ succes: true, dni: dni, token: token });
+}
 
 
 app.use('/auth', auth);
