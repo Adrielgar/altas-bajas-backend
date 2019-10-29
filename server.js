@@ -72,11 +72,15 @@ auth.post('/login', function (req, res) {
         if (usuario[index].pasw === req.body.pasw)
             sendToken(req.body.dni, res);
         else
-            res.json({ succes: false, dni: null, token: null });
+            sendError(res);
     }
     else
-        res.json({ succes: false, dni: null, token: null });
+        sendError(res);
 });
+
+function sendError(res) {
+    res.json({ succes: false, dni: null, token: null });
+}
 
 function sendToken(dni, res) {
     var token = jwt.sign(dni, '1234');
