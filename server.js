@@ -2,8 +2,50 @@ var express = require('express');
 var app = express();
 var bodyParser = require('body-parser');
 var jwt = require('jsonwebtoken');
+var randtoken = require('rand-token');
+var passport = require('passport');
+var JwtStrategy = require('passport-jwt').Strategy;
+var ExtractJwt = require('passport-jwt').ExtractJwt;
+var cors = require('cors');
 
-var usuario = [{
+var refreshTokens = {}; // STORED IN DATA BASE
+
+var SECRET_SIGN = 'SECRET-KEY';
+
+var passportOpts = {
+    jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+    secretOrKey: SECRET_SIGN
+};
+
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(passport.initialize());
+app.use(passport.session());
+app.all(cors());
+
+
+app.use(function (req, res, next) {
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, , Authorization");
+    res.header("Access-Control-Allow-Methods", "GET, PUT, POST");
+    next();
+});
+
+
+passport.use(new JwtStrategy(passportOpts, function (jwtPayload, done) {
+    var expirationDate = new Date(jwtPayload.exp * 1000);
+    if (expirationDate < new Date()) {
+        return done(null, false);
+    }
+    done(null, jwtPayload);
+}));
+
+passport.serializeUser(function (user, done) {
+    done(null, user.username);
+});
+
+
+var listaFormularios = [{
     id: 12992348,
     cod_trab: 1,
     nom_trab: "Garcia Garcia, Adriel",
@@ -37,23 +79,13 @@ var usuario = [{
 
 var usuarioLogin = [];
 
-app.use(bodyParser.json());
-app.use(function (req, res, next) {
-    res.header("Access-Control-Allow-Origin", "*");
-    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
-    next();
-});
-
 var altas_bajas = express.Router();
 var auth = express.Router();
 
-altas_bajas.get('/', (req, res) => {
-    res.json(usuario);
+altas_bajas.get('/', passport.authenticate('jwt'), function (req, res) {
+    res.json(listaFormularios);
 });
 
-/*auth.post('/register', (req, res) => {
-    console.log('nice :)');
-});*/
 auth.post('/register', function (req, res) {
     var index = usuarioLogin.push(req.body) - 1;
     var user = usuarioLogin[index];
@@ -62,29 +94,61 @@ auth.post('/register', function (req, res) {
     res.json({ token: token });
     // var user = req.body;
     // var token = jwt.sign(user.id, 123); // normalmente el id se obtiene de la base de datos
-
 });
 
 auth.post('/login', function (req, res) {
-    var found = usuario.find(u => u.dni_trab === req.body.dni);
+    var { dni, pasw } = req.body;
+    var found = listaFormularios.find(u => u.dni_trab === dni);
     if (found) {
-        var index = usuario.findIndex(u => u.dni_trab === req.body.dni);
-        if (usuario[index].pasw === req.body.pasw)
-            sendToken(req.body.dni, res);
+        var index = listaFormularios.findIndex(u => u.dni_trab === dni);
+        if (listaFormularios[index].pasw === pasw)
+            sendToken(dni, res);
         else
-            sendError(res);
+            res.sendStatus(700);
     }
     else
-        sendError(res);
+        res.sendStatus(700);
 });
 
+auth.post('/logout', function (req, res) {
+    var refreshToken = req.body.refreshToken;
+    if (refreshToken in refreshTokens) {
+        delete refreshTokens[refreshToken]; //NORMALMENTE EN BASE DE DATOS
+    }
+    res.sendStatus(204);
+});
+
+auth.post('/refresh', function (req, res) {
+    var refreshToken = req.body.refreshToken;
+
+    if (refreshToken in refreshTokens) {
+        var user = {
+            dni: refreshTokens[refreshToken],
+            role: 'admin'
+        };
+        var token = jwt.sign(user, SECRET, { expiresIn: 600 });
+        res.json({ tokenRefreshed: token });
+    }
+    else {
+        res.sendStatus(401);
+    }
+});
+
+
+
 function sendError(res) {
-    res.json({ succes: false, dni: null, token: null });
+    res.json({ succes: false, dni: null, token: null, refreshToken: null });
 }
 
 function sendToken(dni, res) {
-    var token = jwt.sign(dni, '1234');
-    res.json({ succes: true, dni: dni, token: token });
+    var user = {
+        dni: dni,
+        role: 'admin'
+    };
+    var token = jwt.sign(user, SECRET_SIGN, { expiresIn: 600 });
+    var refreshToken = randtoken.uid(256);
+    refreshTokens[refreshToken] = dni;
+    res.json({ succes: true, dni: dni, token: token, refreshToken: refreshToken });
 }
 
 
