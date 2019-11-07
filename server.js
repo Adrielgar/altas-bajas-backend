@@ -41,7 +41,10 @@ passport.use(new JwtStrategy(passportOpts, function (jwtPayload, done) {
 }));
 
 passport.serializeUser(function (user, done) {
-    done(null, user.username);
+    done(null, user.dni);
+});
+passport.deserializeUser(function (user, done) {
+    done(null, user.dni);
 });
 
 
@@ -52,7 +55,7 @@ var listaFormularios = [{
     ape_trab: "grimaldina",
     cargo: "Practicante",
     nom_area: "Sistemas",
-    dni_trab: "71268147",
+    dni_trab: "12345678",
     usr_trab: "",
     psw_trab: "",
     fir_trab: "",
@@ -82,21 +85,13 @@ var usuarioLogin = [];
 var altas_bajas = express.Router();
 var auth = express.Router();
 
-altas_bajas.get('/', passport.authenticate('jwt'), function (req, res) {
+altas_bajas.get('/', passport.authenticate('jwt', { session: true }), function (req, res) {
     res.json(listaFormularios);
 });
 
-auth.post('/register', function (req, res) {
-    var index = usuarioLogin.push(req.body) - 1;
-    var user = usuarioLogin[index];
-    user.id = index;
-    var token = jwt.sign(user.id, '123'); // el secreto no debe ser hard code en la aplicación config file
-    res.json({ token: token });
-    // var user = req.body;
-    // var token = jwt.sign(user.id, 123); // normalmente el id se obtiene de la base de datos
-});
 
 auth.post('/login', function (req, res) {
+    console.log(req.body);
     var { dni, pasw } = req.body;
     var found = listaFormularios.find(u => u.dni_trab === dni);
     if (found) {
@@ -110,6 +105,7 @@ auth.post('/login', function (req, res) {
         res.sendStatus(700);
 });
 
+
 auth.post('/logout', function (req, res) {
     var refreshToken = req.body.refreshToken;
     if (refreshToken in refreshTokens) {
@@ -120,13 +116,15 @@ auth.post('/logout', function (req, res) {
 
 auth.post('/refresh', function (req, res) {
     var refreshToken = req.body.refreshToken;
+    console.log(refreshToken);
+    console.log(refreshTokens[refreshToken]);
 
     if (refreshToken in refreshTokens) {
         var user = {
             dni: refreshTokens[refreshToken],
             role: 'admin'
         };
-        var token = jwt.sign(user, SECRET, { expiresIn: 600 });
+        var token = jwt.sign(user, SECRET_SIGN, { expiresIn: 600 });
         res.json({ tokenRefreshed: token });
     }
     else {
@@ -148,6 +146,7 @@ function sendToken(dni, res) {
     var token = jwt.sign(user, SECRET_SIGN, { expiresIn: 600 });
     var refreshToken = randtoken.uid(256);
     refreshTokens[refreshToken] = dni;
+    console.log(refreshTokens[refreshToken]);
     res.json({ succes: true, dni: dni, token: token, refreshToken: refreshToken });
 }
 
